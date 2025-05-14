@@ -51,7 +51,7 @@ Here’s what it delivers:
 - 📡 Send telemetry from an **STM32** or **RP2040** to a local server
 - 📣 Trigger webhook calls from an **ESP8266** or **ESP32**
 - 🧠 Report state changes over **Ethernet or UART** with minimal overhead
-- 🔐 Work alongside an HTTPS proxy or edge gateway that handles encryption
+- 🔐 Work alongside an HTTPS proxy or local gateway that receives your plain HTTP request and securely forwards it to the final HTTPS destination — ideal for constrained devices in IoT setups.
 
 ---
 
