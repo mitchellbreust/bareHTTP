@@ -20,10 +20,15 @@ export const HostServer = extern struct {
     port: u16,
 };
 
+export const KeepConnection = enum(c_uint) {
+    KeepAlive,
+    Kill,
+};
 export const Headers = extern struct {
     server_endpoint: [129]u8, // 128-char path + null terminator
     request_type: RequestType,
     content_type: ContentType,
+    keep_alive: u8
 };
 
 export const KeyValuePair = extern struct {

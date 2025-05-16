@@ -24,7 +24,7 @@ pub fn createHostTarget(ip: []const u8, port: u16) !types.HostServer {
     };
 }
 
-pub fn createHeaders(endpoint: []const u8, req: types.RequestType, ct: types.ContentType) !types.Headers {
+pub fn createHeaders(endpoint: []const u8, req: types.RequestType, ct: types.ContentType, alive: types.KeepConnection) !types.Headers {
     const length: usize = endpoint.len; 
     if (length > 128) {
         return errors.InvalidLength;
@@ -40,7 +40,8 @@ pub fn createHeaders(endpoint: []const u8, req: types.RequestType, ct: types.Con
     return types.Headers {
         .server_endpoint = endpoint_copy,
         .request_type = req,
-        .content_type = ct
+        .content_type = ct,
+        .keep_alive = alive
     };
 }
 

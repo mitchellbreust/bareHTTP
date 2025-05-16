@@ -59,10 +59,11 @@ export fn create_headers(
     req: types.RequestType,
     ct: types.ContentType,
     out_hdr: *types.Headers,
+    keep_alive: types.KeepAlive
 ) c_int {
     const slice = endpoint[0..endpoint_len];
 
-    const result = api.create_headers(slice, req, ct);
+    const result = api.create_headers(slice, req, ct, keep_alive);
     if (result) |hdr| {
         out_hdr.* = hdr;
         return 0; // success
