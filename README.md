@@ -2,7 +2,7 @@
 
 > _Sure, there's no async, no TLS, no DNS, no cookies, no redirect handling, no retries, and no gzip magic. But that’s the charm — it's honest, simple, and does exactly what you tell it to._
 
-`bareHttp` is a tiny, no-frills HTTP/1.0 client written in Zig, purpose-built for embedded systems, IoT devices, and anyone who just wants to **send a simple HTTP request without bringing an operating system to its knees**.
+`bareHttp` is a tiny, no-frills HTTP/1.1 client written in Zig, purpose-built for embedded systems, IoT devices, and anyone who just wants to **send a simple HTTP request without bringing an operating system to its knees**.
 
 No TLS.  
 No allocators.  
