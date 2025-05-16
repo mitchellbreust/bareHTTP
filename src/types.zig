@@ -1,45 +1,52 @@
-pub const AddressType = enum(c_uint) {
+export const AddressType = enum(c_uint) {
     IPv4,
     IPv6,
 };
 
-pub const RequestType = enum(c_uint) {
+export const RequestType = enum(c_uint) {
     POST,
     GET,
 };
 
-pub const ContentType = enum(c_uint) {
+export const ContentType = enum(c_uint) {
     Json,
     Form,
     Binary,
 };
 
-pub const HostServer = extern struct {
+export const HostServer = extern struct {
     ip_address: [40]u8, // 39 chars + null terminator max for IPv6
     ip_address_type: AddressType,
     port: u16,
 };
 
-pub const Headers = extern struct {
+export const Headers = extern struct {
     server_endpoint: [129]u8, // 128-char path + null terminator
     request_type: RequestType,
     content_type: ContentType,
 };
 
-pub const SmallPayload = extern struct {
-    content: [128]u8,
+export const KeyValuePair = extern struct {
+    key: [17]u8, // 16 bytes + nul terminator
+    key_len: usize,
+    value: [33]u8,  // 32 bytes + nul terminator
+    value_len: usize,
+};
+
+export const SmallPayload = extern struct {
+    content_arr: [5]KeyValuePair,
     cur_content_length: u8,
 };
-pub const SMALL_PAYLOAD_MAX_LENGTH: u8 = 128;
+export const SMALL_PAYLOAD_MAX_LENGTH: u8 = 5; // 0.31kb
 
-pub const MedPayload = extern struct {
-    content: [1024]u8,
+export const MedPayload = extern struct {
+    content: [20]KeyValuePair,
     cur_content_length: u16,
 };
-pub const MED_PAYLOAD_MAX_LENGTH: u16 = 1024;
+export const MED_PAYLOAD_MAX_LENGTH: u8 = 20; // 1.25kb
 
-pub const BigPayload = extern struct {
-    content: [4096]u8,
+export const BigPayload = extern struct {
+    content: [100]KeyValuePair,
     cur_content_length: u16,
 };
-pub const BIG_PAYLOAD_MAX_LENGTH: u16 = 4096;
+export const BIG_PAYLOAD_MAX_LENGTH: u8 = 100; // 6.25kb
