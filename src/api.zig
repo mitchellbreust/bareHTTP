@@ -8,6 +8,22 @@ pub const errors = error {
     MedPayLoadFull
 };
 
+pub fn createHostTarget(ip: []const u8, port: u16) !types.HostServer {
+    //if (ip.len > 15) {
+        // ipv6, will implement later
+    //}
+
+    var ip_copy: [40]u8 = undefined;
+    @memcpy(ip_copy[0..ip.len], ip);
+    ip_copy[ip.len] = 0;
+
+    return types.HostServer {
+        .ip_address = ip_copy,
+        .port = port,
+        .ip_address_type = type.IPv4
+    };
+}
+
 pub fn createHeaders(endpoint: []const u8, req: types.RequestType, ct: types.ContentType) !types.Headers {
     const length: usize = endpoint.len; 
     if (length > 128) {
@@ -15,11 +31,7 @@ pub fn createHeaders(endpoint: []const u8, req: types.RequestType, ct: types.Con
     }
 
     var endpoint_copy = [129]u8;
-    var i: usize = 0;
-    while (i < length) {
-        endpoint_copy[i] = endpoint[i];
-        i += 1;
-    }
+    @memcpy(endpoint_copy[0..length], endpoint);
 
     if (endpoint_copy[length - 1] != 0) {
         endpoint_copy[length] = 0;
@@ -44,10 +56,10 @@ pub fn addKeyValueToPayload(comptime PayloadType: type, payload: *PayloadType, m
     var key_buf: [17]u8 = undefined;
     var val_buf: [33]u8 = undefined;
 
-    std.mem.copy(u8, key_buf[0..key.len], key);
+    @memcpy(key_buf[0..key.len], key);
     key_buf[key.len] = 0;
 
-    std.mem.copy(u8, val_buf[0..val.len], val);
+    @memcpy(val_buf[0..val.len], val);
     val_buf[val.len] = 0;
 
     const key_val_pair = types.KeyValuePair{
