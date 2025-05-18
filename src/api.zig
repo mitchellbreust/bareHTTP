@@ -8,7 +8,23 @@ pub const errors = error {
     MedPayLoadFull
 };
 
-pub fn createHostTarget(ip: []const u8, port: u16) !types.HostServer {
+pub fn createNetworkDriver(
+    send_fn: ?*const fn ([*]const u8, usize) callconv(.C) c_int,
+    recv_fn: ?*const fn ([*]u8, usize, u16) callconv(.C) c_int,
+) types.NetworkDriver {
+    if (send_fn == null or recv_fn == null) {
+        @panic("Both send and recv functions must be provided");
+    }
+
+    std.debug.print("✔ NetworkDriver created\n", .{});
+
+    return types.NetworkDriver{
+        .send = send_fn,
+        .recv = recv_fn,
+    };
+}
+
+pub fn createHostTarget(ip: []const u8, port: u16, talk_mode: types.TalkMode, nr: types.NetworkDriver) !types.HostServer {
     //if (ip.len > 15) {
         // ipv6, will implement later
     //}
@@ -20,7 +36,10 @@ pub fn createHostTarget(ip: []const u8, port: u16) !types.HostServer {
     return types.HostServer {
         .ip_address = ip_copy,
         .port = port,
-        .ip_address_type = type.IPv4
+        .ip_address_type = type.IPv4,
+        .talk_mode = talk_mode,
+        .network_driver = nr,
+        .socket_fd = -1,
     };
 }
 
@@ -72,4 +91,24 @@ pub fn addKeyValueToPayload(comptime PayloadType: type, payload: *PayloadType, m
 
     payload.content_arr[payload.cur_content_length] = key_val_pair;
     payload.cur_content_length += 1;
+}
+
+pub fn httpRunLopp();
+
+pub fn httpNetTick()
+
+pub fn sendHttpRequest(
+    host: *types.HostServer,
+    headers: *types.Headers,
+    comptime PayloadType: type,
+    payload: *PayloadType,
+) !void {
+    if (host.socket_fd == -1) {
+        // create socket between host
+    }
+
+}
+
+pub fn getHttpResponse(host: *types.HostServer, max_wait_time_ms: u16) !void {
+    
 }

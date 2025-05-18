@@ -1,3 +1,16 @@
+
+const NetworkDriver = extern struct {
+    send: ?*const fn (data: [*]const u8, len: usize) callconv(.C) c_int,
+    recv: ?*const fn (buf: [*]u8, len: usize, timeout_ms: u16) callconv(.C) c_int,
+};
+
+const ContextualDriver = extern struct {
+    ctx: *anyopaque,
+    send: *const fn (ctx: *anyopaque, data: [*]const u8, usize) callconv(.C) c_int,
+    recv: *const fn (ctx: *anyopaque, buf: [*]u8, usize, u16) callconv(.C) c_int,
+};
+
+
 export const AddressType = enum(c_uint) {
     IPv4,
     IPv6,
@@ -14,10 +27,19 @@ export const ContentType = enum(c_uint) {
     Binary,
 };
 
+export const TalkMode = enum (c_uint) {
+    SEND_ONLY,
+    READ_ONLY,
+    SEND_AND_READ
+};
+
 export const HostServer = extern struct {
     ip_address: [40]u8, // 39 chars + null terminator max for IPv6
     ip_address_type: AddressType,
     port: u16,
+    talk_mode: TalkMode,
+    network_driver: NetworkDriver,
+    socket_fd: i32,
 };
 
 export const KeepConnection = enum(c_uint) {
