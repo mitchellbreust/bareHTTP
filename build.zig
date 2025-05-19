@@ -4,32 +4,32 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable(.{
+    const lib = b.addStaticLibrary(.{
         .name = "barehttp",
-        .root_source_file = .{ .path = "src/api.zig" }, // adjust if your main entry is different
+        .root_source_file = b.path("src/c_api.zig"), // C-compatible Zig interface
         .target = target,
         .optimize = optimize,
     });
 
-    // Add uIP include path
-    exe.addIncludePath(.{ .path = "src/uip" });
+    // Include paths
+    lib.addIncludePath(b.path("src/uip"));
+    lib.addIncludePath(b.path("src"));
 
-    // Add uIP C source files
-    exe.addCSourceFiles(&.{
-        "src/uip/uip.c",
-        "src/uip/uip_arp.c",
-        "src/uip/uip-fw.c",
-        "src/uip/uip-neighbor.c",
-        "src/uip/uip-split.c",
-        "src/uip/psock.c",
-        "src/uip/timer.c",
-    }, &.{}); // No extra flags needed, unless your chip/platform requires defines
+    // Add C source files (uIP stack, etc.)
+    lib.addCSourceFiles(.{
+        .files = &.{
+            "src/uip/uip.c",
+            "src/uip/uip_arp.c",
+            "src/uip/uip-fw.c",
+            "src/uip/uip-neighbor.c",
+            "src/uip/psock.c",
+            "src/uip/timer.c",
+            "src/uip/clock-arch.c",
+        },
+        .flags = &.{},
+    });
 
-    // Link C standard library
-    exe.linkLibC();
+    lib.linkLibC();
 
-    // Optional: enable debug symbols or warnings
-    // exe.addCSourceFiles(..., &.{"-Wall", "-g"});
-
-    b.installArtifact(exe);
+    b.installArtifact(lib);
 }

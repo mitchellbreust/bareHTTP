@@ -40,6 +40,7 @@
  */
 
 #include "uip-neighbor.h"
+#include <stdio.h>
 
 #include <string.h>
 

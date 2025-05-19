@@ -1,5 +1,12 @@
 const std = @import("std");
-const types = @import("types.zig"); // 👈 Import your public types
+const types = @import("types.zig");
+const network = @import("networking.zig");
+const parser = @import("httpParser.zig");
+const c = @cImport({
+    @cInclude("uip.h");       // Include the uIP header that defines uip_init
+});
+
+var has_init: u8 = -1;
 
 pub const errors = error {
     InvalidLength,
@@ -49,7 +56,8 @@ pub fn createHeaders(endpoint: []const u8, req: types.RequestType, ct: types.Con
         return errors.InvalidLength;
     }
 
-    var endpoint_copy = [129]u8;
+    var buffer: [129]u8 = undefined;
+    var endpoint_copy: []u8 = buffer[0..];
     @memcpy(endpoint_copy[0..length], endpoint);
 
     if (endpoint_copy[length - 1] != 0) {
@@ -93,22 +101,80 @@ pub fn addKeyValueToPayload(comptime PayloadType: type, payload: *PayloadType, m
     payload.cur_content_length += 1;
 }
 
-pub fn httpRunLopp();
-
-pub fn httpNetTick()
-
-pub fn sendHttpRequest(
-    host: *types.HostServer,
-    headers: *types.Headers,
-    comptime PayloadType: type,
-    payload: *PayloadType,
+pub fn httpClientInitLocalNetwork(
+    driver: *types.NetworkDriver,
+    local_ip: [4]u8,
+    target_ip: [4]u8,
+    port: u16,
+    mac: []u8
 ) !void {
-    if (host.socket_fd == -1) {
-        // create socket between host
+    // Init uIP and ARP
+    c.uip_init();
+    c.uip_arp_init();
+
+    // Set IP and mask
+    const local = c.uip_ipaddr_t{ .addr = @bitCast(local_ip) };
+    c.uip_sethostaddr(&local);
+
+    const mask = c.uip_ipaddr_t{ .addr = @bitCast(.{255, 255, 255, 0}) };
+    c.uip_setnetmask(&mask);
+
+    // Create TCP connection
+    const remote = c.uip_ipaddr_t{ .addr = @bitCast(target_ip) };
+    const conn = c.uip_connect(&remote, std.math.htons(port));
+    if (conn == null) return error.NoConnection;
+
+    // Add ARP entry manually
+    c.uip_arp_table[0].ipaddr = remote;
+    @memcpy(&c.uip_arp_table[0].ethaddr.addr, &mac);
+
+    // ⚠️ Trigger uIP to send out the SYN
+    c.uip_periodic(0);
+    if (c.uip_len > 0) {
+        _ = driver.send.?(
+            c.uip_buf.ptr,
+            c.uip_len
+        );
+    }
+}
+
+pub fn httpNetTick(driver: *types.NetworkDriver, con_idx: c_int) !?types.FullHttpReq {
+    var raw_payload: ?[]u8 = null;
+    var nothing_to_read = false;
+
+    // Step 1: Try reading Ethernet frame
+    const read_result = network.processTcpFrameAndReturnPayload(driver) catch |err| {
+        if (err == error.NothingToReadFromEthernetChip) {
+            nothing_to_read = true;
+            null;
+        } else {
+            return err;
+        }
+    };
+
+    raw_payload = read_result;
+
+    // Step 2: Check for retransmit or ACK
+    const status = try network.checkForRetransmissionsOrTimeout(con_idx);
+    switch (status) {
+        .TRUE => try network.retransmit(driver, con_idx),
+        .ACK => try network.sendNextPayloadFromBufferAndShuffle(con_idx, driver),
+        .FALSE => {}, // nothing to do
     }
 
+    // Step 3: Return payload if it was received
+    if (!nothing_to_read and raw_payload != null) {
+        return parser.rawBytesToFullHtppReq(raw_payload.?);
+    }
+
+    return null;
 }
 
-pub fn getHttpResponse(host: *types.HostServer, max_wait_time_ms: u16) !void {
-    
+pub fn sendHttpRequest(req: types.FullHttpReq, con_idx: c_int, driver: *types.NetworkDriver) !void {
+    if (c.uip_conn.len != 0) {
+        return error.PreviousDataStillPending;
+    }
+    network.writeTcpFrameAndSend(con_idx, req, driver);
 }
+
+

@@ -27,53 +27,28 @@ export fn create_host_target(
     port: u16,
     out_host: *types.HostServer,
 ) c_int {
-    if (ip == null or out_host == null) return -2;
     if (ip_len > 39) return 1; // too long for IPv4 or IPv6 textual form
 
     var ip_copy: [40]u8 = undefined;
     @memcpy(ip_copy[0..ip_len], ip);
     ip_copy[ip_len] = 0; // null-terminate
 
+    const network_d = types.NetworkDriver {
+        .recv = null,
+        .send = null
+    };
+
     out_host.* = types.HostServer{
         .ip_address = ip_copy,
         .port = port,
-        .ip_address_type = types.IPv4, // adjust as needed
+        .ip_address_type = types.AddressType.IPv4, // adjust as needed
+        .talk_mode = types.TalkMode.SEND_AND_READ,
+        .network_driver = network_d
     };
 
     return 0; // success
 }
 
-/// C-compatible wrapper for creating HTTP headers.
-///
-/// Converts a raw pointer and length (`[*]const u8`, `usize`) into a Zig slice.
-/// Delegates to the internal `api.create_headers` function and stores the result
-/// in the caller-provided `out_hdr` buffer.
-/// 
-/// Return codes:
-///   0 => Success
-///   1 => Endpoint too long
-///  -1 => Unexpected internal error
-export fn create_headers(
-    endpoint: [*]const u8,
-    endpoint_len: usize,
-    req: types.RequestType,
-    ct: types.ContentType,
-    out_hdr: *types.Headers,
-    keep_alive: types.KeepAlive
-) c_int {
-    const slice = endpoint[0..endpoint_len];
-
-    const result = api.create_headers(slice, req, ct, keep_alive);
-    if (result) |hdr| {
-        out_hdr.* = hdr;
-        return 0; // success
-    } else |err| {
-        return switch (err) {
-            error.EndpointTooLong => 1,
-            else => -1,
-        };
-    }
-}
 
 /// C-compatible function for adding a key-value pair to a SmallPayload.
 ///
@@ -106,63 +81,7 @@ export fn addKeyValueToSmallPayload(
         return switch (err) {
             error.InvalidLength => 1,
             error.PayloadFull => 2,
-            else => -1,
         };
     }
 }
 
-/// C-compatible version of addKeyValueToPayload for MedPayload.
-export fn addKeyValueToMedPayload(
-    key: [*]const u8,
-    key_len: usize,
-    val: [*]const u8,
-    val_len: usize,
-    payload: *types.MedPayload,
-) c_int {
-    const key_slice = key[0..key_len];
-    const val_slice = val[0..val_len];
-
-    if (api.addKeyValueToPayload(
-        types.MedPayload,
-        payload,
-        types.MED_PAYLOAD_MAX_LENGTH,
-        key_slice,
-        val_slice,
-    )) |_| {
-        return 0;
-    } else |err| {
-        return switch (err) {
-            error.InvalidLength => 1,
-            error.PayloadFull => 2,
-            else => -1,
-        };
-    }
-}
-
-/// C-compatible version of addKeyValueToPayload for BigPayload.
-export fn addKeyValueToBigPayload(
-    key: [*]const u8,
-    key_len: usize,
-    val: [*]const u8,
-    val_len: usize,
-    payload: *types.BigPayload,
-) c_int {
-    const key_slice = key[0..key_len];
-    const val_slice = val[0..val_len];
-
-    if (api.addKeyValueToPayload(
-        types.BigPayload,
-        payload,
-        types.BIG_PAYLOAD_MAX_LENGTH,
-        key_slice,
-        val_slice,
-    )) |_| {
-        return 0;
-    } else |err| {
-        return switch (err) {
-            error.InvalidLength => 1,
-            error.PayloadFull => 2,
-            else => -1,
-        };
-    }
-}
